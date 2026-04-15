@@ -1,8 +1,19 @@
-/* Динамический фон */
+/* Базовые настройки для предотвращения скачков */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #0f172a;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Динамический фон "Облачный туннель" */
 .cloud-tunnel {
   background: linear-gradient(-45deg, #0f172a, #1e1b4b, #064e3b, #0f172a);
   background-size: 400% 400%;
   animation: gradientBG 15s ease infinite;
+  overflow-y: auto;
 }
 
 @keyframes gradientBG {
@@ -17,39 +28,56 @@
   }
 }
 
-/* Glassmorphism */
+/* Решение проблемы высоты на мобилках */
+.app-height {
+  height: 90vh; /* Fallback */
+  height: 90dvh; /* Динамическая высота за вычетом баров браузера */
+}
+
+@media (max-width: 640px) {
+  .app-height {
+    height: 100dvh; /* На мобилках используем весь доступный экран */
+    border-radius: 0; /* Убираем скругления на весь экран для иммерсивности */
+  }
+  body {
+    padding: 0;
+  }
+}
+
+/* Эффект голографического стекла */
 .holographic-glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
 .glass-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Стили карточек задач */
 .glass-task {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-task.completed {
-  background: rgba(45, 212, 191, 0.15);
-  border-color: rgba(45, 212, 191, 0.3);
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.2);
 }
 
-/* Кастомный скроллбар для списка задач */
+/* Кастомный скроллбар */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
