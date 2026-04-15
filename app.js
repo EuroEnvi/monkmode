@@ -7,7 +7,7 @@ let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   logs: [],
 };
 
-let currentEditId = null; // Флаг текущего редактирования
+let currentEditId = null;
 
 // DOM Элементы
 const elements = {
@@ -28,7 +28,6 @@ const elements = {
   btnExport: document.getElementById("btn-export"),
 };
 
-// Утилиты дат
 const getTodayStr = () => new Date().toISOString().split("T")[0];
 const getTimeStr = () => new Date().toTimeString().substring(0, 5);
 
@@ -55,9 +54,25 @@ function triggerVibration() {
   if (navigator.vibrate) navigator.vibrate(50);
 }
 
+// Новая функция: Перемещение задачи по массиву
+function moveHabit(index, direction) {
+  if (direction === -1 && index > 0) {
+    // Двигаем вверх
+    const temp = appData.habits[index];
+    appData.habits[index] = appData.habits[index - 1];
+    appData.habits[index - 1] = temp;
+  } else if (direction === 1 && index < appData.habits.length - 1) {
+    // Двигаем вниз
+    const temp = appData.habits[index];
+    appData.habits[index] = appData.habits[index + 1];
+    appData.habits[index + 1] = temp;
+  }
+  saveData();
+  renderUI();
+}
+
 function renderUI() {
   const today = getTodayStr();
-
   const options = { weekday: "long", month: "long", day: "numeric" };
   elements.currentDate.textContent = new Date().toLocaleDateString(
     "ru-RU",
@@ -75,7 +90,7 @@ function renderUI() {
 
   elements.habitsList.innerHTML = "";
 
-  appData.habits.forEach((habit) => {
+  appData.habits.forEach((habit, index) => {
     dailyPotentialXP += habit.xp;
 
     const isCompletedToday = appData.logs.some(
@@ -86,12 +101,23 @@ function renderUI() {
     const el = document.createElement("div");
     el.className = `glass-task p-4 rounded-xl mb-3 flex justify-between items-center ${isCompletedToday ? "completed" : ""}`;
 
+    // Обновленная структура: добавлены стрелки вверх/вниз
     el.innerHTML = `
             <div class="flex-1 cursor-pointer toggle-area">
                 <p class="font-semibold ${isCompletedToday ? "text-teal-300 line-through" : "text-white"}">${habit.title}</p>
                 <p class="text-xs opacity-60">XP: ${habit.xp}</p>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                
+                <div class="flex flex-col items-center justify-center -space-y-1">
+                    <button class="move-up p-1 text-white/30 hover:text-white transition-colors ${index === 0 ? "invisible" : ""}">
+                        <i class="ph-bold ph-caret-up text-lg"></i>
+                    </button>
+                    <button class="move-down p-1 text-white/30 hover:text-white transition-colors ${index === appData.habits.length - 1 ? "invisible" : ""}">
+                        <i class="ph-bold ph-caret-down text-lg"></i>
+                    </button>
+                </div>
+
                 <button class="edit-btn text-white/40 hover:text-white transition-colors p-1">
                     <i class="ph ph-pencil-simple text-xl"></i>
                 </button>
@@ -101,12 +127,28 @@ function renderUI() {
             </div>
         `;
 
-    // Вешаем события на зоны клика
+    // События для чекбокса и текста
     const toggleAreas = el.querySelectorAll(".toggle-area");
     toggleAreas.forEach((area) => {
       area.onclick = () => toggleHabit(habit.id);
     });
 
+    // События для стрелочек
+    const btnUp = el.querySelector(".move-up");
+    if (btnUp)
+      btnUp.onclick = (e) => {
+        e.stopPropagation();
+        moveHabit(index, -1);
+      };
+
+    const btnDown = el.querySelector(".move-down");
+    if (btnDown)
+      btnDown.onclick = (e) => {
+        e.stopPropagation();
+        moveHabit(index, 1);
+      };
+
+    // Событие для редактирования
     el.querySelector(".edit-btn").onclick = (e) => {
       e.stopPropagation();
       openModal(habit.id);
@@ -149,7 +191,6 @@ function toggleHabit(id) {
   renderUI();
 }
 
-// Управление модалкой
 const openModal = (habitId = null) => {
   currentEditId = habitId;
   elements.modal.classList.remove("hidden");
@@ -191,7 +232,6 @@ const closeModal = () => {
 elements.btnAdd.onclick = () => openModal();
 elements.btnCancel.onclick = closeModal;
 
-// Сохранение / Обновление
 elements.btnSave.onclick = () => {
   const title = elements.titleInput.value.trim();
   const xp = parseInt(elements.xpInput.value) || 0;
@@ -210,7 +250,6 @@ elements.btnSave.onclick = () => {
   }
 };
 
-// Удаление задачи
 elements.btnDelete.onclick = () => {
   if (currentEditId) {
     appData.habits = appData.habits.filter((h) => h.id !== currentEditId);
@@ -220,7 +259,6 @@ elements.btnDelete.onclick = () => {
   }
 };
 
-// Экспорт CSV
 elements.btnExport.onclick = () => {
   if (appData.logs.length === 0) return alert("Нет данных для выгрузки");
 
@@ -250,10 +288,8 @@ elements.btnExport.onclick = () => {
   document.body.removeChild(link);
 };
 
-// Запуск
 renderUI();
 
-// Service Worker для PWA
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
