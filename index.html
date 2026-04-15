@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Monk Mode | Трекер</title>
+    <link rel="manifest" href="manifest.json" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  </head>
+  <body
+    class="cloud-tunnel min-h-screen text-white font-sans overflow-hidden flex items-center justify-center p-4"
+  >
+    <main
+      id="app-container"
+      class="holographic-glass w-full max-w-md rounded-3xl p-6 shadow-2xl relative z-10 flex flex-col h-[90vh]"
+    >
+      <header class="mb-6">
+        <div class="flex justify-between items-end mb-2">
+          <div>
+            <h1 class="text-2xl font-bold tracking-wider">Monk Mode</h1>
+            <p class="text-sm opacity-70" id="current-date">Сегодня</p>
+          </div>
+          <div class="text-right">
+            <span class="text-3xl font-bold text-teal-300" id="total-xp"
+              >0</span
+            >
+            <span class="text-xs opacity-70 block uppercase">Total XP</span>
+          </div>
+        </div>
+
+        <div
+          class="h-3 w-full bg-white/10 rounded-full overflow-hidden backdrop-blur-sm mt-4"
+        >
+          <div
+            id="progress-fill"
+            class="h-full bg-gradient-to-r from-teal-400 to-emerald-400 w-0 rounded-full"
+          ></div>
+        </div>
+        <p class="text-right text-xs mt-1 opacity-60" id="daily-progress-text">
+          0% выполнено сегодня
+        </p>
+      </header>
+
+      <div
+        class="flex-1 overflow-y-auto pr-2 custom-scrollbar"
+        id="habits-list"
+      ></div>
+
+      <footer class="mt-6 flex gap-3">
+        <button
+          id="btn-export"
+          class="flex-1 glass-btn py-3 rounded-xl flex justify-center items-center gap-2 text-sm transition-all hover:bg-white/20"
+        >
+          <i class="ph ph-download-simple text-lg"></i> Отчет
+        </button>
+        <button
+          id="btn-add"
+          class="flex-1 bg-teal-500/80 hover:bg-teal-400/90 py-3 rounded-xl flex justify-center items-center gap-2 text-sm font-semibold transition-all shadow-[0_0_15px_rgba(45,212,191,0.4)]"
+        >
+          <i class="ph ph-plus-bold text-lg"></i> Добавить
+        </button>
+      </footer>
+    </main>
+
+    <div
+      id="modal"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0"
+    >
+      <div
+        class="holographic-glass w-full max-w-sm rounded-2xl p-6 transform scale-95"
+        id="modal-content"
+      >
+        <h2 class="text-xl font-bold mb-4">Новая задача</h2>
+        <input
+          type="text"
+          id="habit-title"
+          placeholder="Название (напр. Тренировка)"
+          class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white mb-4 outline-none focus:border-teal-400 transition-colors"
+        />
+        <input
+          type="number"
+          id="habit-xp"
+          placeholder="Вес в XP (напр. 50)"
+          class="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white mb-6 outline-none focus:border-teal-400 transition-colors"
+        />
+        <div class="flex gap-3">
+          <button
+            id="btn-cancel"
+            class="flex-1 bg-white/10 py-2 rounded-lg hover:bg-white/20 transition-colors"
+          >
+            Отмена
+          </button>
+          <button
+            id="btn-save"
+            class="flex-1 bg-teal-500 py-2 rounded-lg font-bold shadow-[0_0_10px_rgba(45,212,191,0.4)]"
+          >
+            Создать
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
