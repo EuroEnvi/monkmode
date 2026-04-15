@@ -1,23 +1,18 @@
 const STORAGE_KEY = "monk_mode_data";
 
-// Базовый пак задач для старта
 const DEFAULT_HABITS = [
   { id: 1, title: "Ранний подъем", xp: 10, category: "☀️ УТРО" },
   { id: 2, title: "Стакан воды", xp: 5, category: "☀️ УТРО" },
   { id: 3, title: "Контрастный душ", xp: 15, category: "☀️ УТРО" },
   { id: 4, title: "Зарядка / Разминка", xp: 20, category: "☀️ УТРО" },
-
   { id: 5, title: "Главная задача (Deep Work)", xp: 100, category: "⚙️ ФОКУС" },
   { id: 6, title: "Разбор почты / сообщений", xp: 20, category: "⚙️ ФОКУС" },
   { id: 7, title: "Изучение нового (15 мин)", xp: 30, category: "⚙️ ФОКУС" },
-
   { id: 8, title: "Тренировка", xp: 50, category: "🥗 ТЕЛО" },
   { id: 9, title: "10 000 шагов", xp: 30, category: "🥗 ТЕЛО" },
   { id: 10, title: "Никакого сахара", xp: 40, category: "🥗 ТЕЛО" },
-
   { id: 11, title: "Звонок близким", xp: 30, category: "🤝 СВЯЗИ" },
   { id: 12, title: "Уборка (15 минут)", xp: 20, category: "🤝 СВЯЗИ" },
-
   { id: 13, title: "Планирование завтра", xp: 20, category: "🌙 ВЕЧЕР" },
   { id: 14, title: "Чтение (10 стр)", xp: 20, category: "🌙 ВЕЧЕР" },
   { id: 15, title: "Отбой до 23:30", xp: 30, category: "🌙 ВЕЧЕР" },
@@ -25,7 +20,7 @@ const DEFAULT_HABITS = [
 
 let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   totalXP: 0,
-  habits: DEFAULT_HABITS, // Зашиваем список сюда
+  habits: DEFAULT_HABITS,
   logs: [],
 };
 
@@ -42,6 +37,7 @@ const elements = {
   modalTitle: document.getElementById("modal-title"),
   titleInput: document.getElementById("habit-title"),
   xpInput: document.getElementById("habit-xp"),
+  categoryInput: document.getElementById("habit-category"), // Новое поле
   btnAdd: document.getElementById("btn-add"),
   btnCancel: document.getElementById("btn-cancel"),
   btnSave: document.getElementById("btn-save"),
@@ -59,6 +55,13 @@ const elements = {
 const getTodayStr = () => new Date().toISOString().split("T")[0];
 const getTimeStr = () => new Date().toTimeString().substring(0, 5);
 
+gsap.from("#app-container", {
+  y: 20,
+  opacity: 0,
+  duration: 0.8,
+  ease: "power3.out",
+});
+
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 }
@@ -67,7 +70,38 @@ function triggerVibration() {
   if (navigator.vibrate) navigator.vibrate(50);
 }
 
-// Рендер с группировкой по категориям
+// Умная перестановка внутри категории
+function moveHabit(id, direction) {
+  const habit = appData.habits.find((h) => h.id === id);
+  if (!habit) return;
+
+  const catName = habit.category || "📦 ПРОЧЕЕ";
+  const catHabits = appData.habits.filter(
+    (h) => (h.category || "📦 ПРОЧЕЕ") === catName,
+  );
+  const indexInCat = catHabits.findIndex((h) => h.id === id);
+
+  if (direction === -1 && indexInCat > 0) {
+    // Двигаем вверх (меняем с соседом сверху)
+    swapInGlobalArray(id, catHabits[indexInCat - 1].id);
+  } else if (direction === 1 && indexInCat < catHabits.length - 1) {
+    // Двигаем вниз (меняем с соседом снизу)
+    swapInGlobalArray(id, catHabits[indexInCat + 1].id);
+  }
+}
+
+function swapInGlobalArray(id1, id2) {
+  const idx1 = appData.habits.findIndex((h) => h.id === id1);
+  const idx2 = appData.habits.findIndex((h) => h.id === id2);
+  // Меняем элементы местами
+  [appData.habits[idx1], appData.habits[idx2]] = [
+    appData.habits[idx2],
+    appData.habits[idx1],
+  ];
+  saveData();
+  renderUI();
+}
+
 function renderUI() {
   const today = getTodayStr();
   const options = { weekday: "long", month: "long", day: "numeric" };
@@ -87,28 +121,23 @@ function renderUI() {
 
   elements.habitsList.innerHTML = "";
 
-  // Группируем задачи по категориям
+  // Собираем уникальные категории без дубликатов с сохранением порядка
   const categories = [
-    ...new Set(appData.habits.map((h) => h.category || "ПРОЧЕЕ")),
+    ...new Set(appData.habits.map((h) => h.category || "📦 ПРОЧЕЕ")),
   ];
 
   categories.forEach((catName) => {
-    // Создаем заголовок категории
     const header = document.createElement("div");
     header.className =
-      "text-[10px] uppercase tracking-[0.2em] opacity-40 mb-3 mt-6 first:mt-2 ml-1";
+      "text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-3 mt-6 first:mt-2 ml-1";
     header.textContent = catName;
     elements.habitsList.appendChild(header);
 
-    // Фильтруем задачи этой категории
     const catHabits = appData.habits.filter(
-      (h) => (h.category || "ПРОЧЕЕ") === catName,
+      (h) => (h.category || "📦 ПРОЧЕЕ") === catName,
     );
 
-    catHabits.forEach((habit) => {
-      const indexInFullList = appData.habits.findIndex(
-        (h) => h.id === habit.id,
-      );
+    catHabits.forEach((habit, indexInCat) => {
       dailyPotentialXP += habit.xp;
       const isCompletedToday = appData.logs.some(
         (l) => l.habitId === habit.id && l.date === today,
@@ -118,12 +147,21 @@ function renderUI() {
       const el = document.createElement("div");
       el.className = `glass-task p-4 rounded-2xl mb-2 flex justify-between items-center ${isCompletedToday ? "completed" : ""}`;
 
+      // Вернули стрелочки, скрывая их у первого и последнего элемента в категории
       el.innerHTML = `
                 <div class="flex-1 cursor-pointer toggle-area">
                     <p class="font-semibold text-sm ${isCompletedToday ? "text-teal-300 line-through" : "text-white"}">${habit.title}</p>
-                    <p class="text-[10px] opacity-50 uppercase mt-0.5">XP: ${habit.xp}</p>
+                    <p class="text-[10px] opacity-50 uppercase mt-0.5 tracking-wider">XP: ${habit.xp}</p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <div class="flex flex-col items-center justify-center -space-y-2 mr-1">
+                        <button class="move-up p-1 text-white/20 hover:text-white transition-colors ${indexInCat === 0 ? "invisible" : ""}">
+                            <i class="ph-bold ph-caret-up text-lg"></i>
+                        </button>
+                        <button class="move-down p-1 text-white/20 hover:text-white transition-colors ${indexInCat === catHabits.length - 1 ? "invisible" : ""}">
+                            <i class="ph-bold ph-caret-down text-lg"></i>
+                        </button>
+                    </div>
                     <button class="edit-btn text-white/20 hover:text-white transition-colors p-2">
                         <i class="ph ph-pencil-simple text-lg"></i>
                     </button>
@@ -137,6 +175,20 @@ function renderUI() {
       toggleAreas.forEach((area) => {
         area.onclick = () => toggleHabit(habit.id);
       });
+
+      const btnUp = el.querySelector(".move-up");
+      if (btnUp)
+        btnUp.onclick = (e) => {
+          e.stopPropagation();
+          moveHabit(habit.id, -1);
+        };
+
+      const btnDown = el.querySelector(".move-down");
+      if (btnDown)
+        btnDown.onclick = (e) => {
+          e.stopPropagation();
+          moveHabit(habit.id, 1);
+        };
 
       el.querySelector(".edit-btn").onclick = (e) => {
         e.stopPropagation();
@@ -156,7 +208,7 @@ function renderUI() {
     duration: 0.6,
     ease: "power2.out",
   });
-  elements.dailyProgressText.textContent = `${progressPercent}% выполнено сегодня`;
+  elements.dailyProgressText.textContent = `${progressPercent}% выполнено`;
 }
 
 function toggleHabit(id) {
@@ -176,12 +228,11 @@ function toggleHabit(id) {
     appData.logs.push({ date: today, habitId: id, time: getTimeStr() });
     appData.totalXP += habit.xp;
   }
-
   saveData();
   renderUI();
 }
 
-// Модалка Задач
+// Управление модалкой (с добавлением категории)
 const openModal = (habitId = null) => {
   currentEditId = habitId;
   elements.modal.classList.remove("hidden");
@@ -196,11 +247,13 @@ const openModal = (habitId = null) => {
     const habit = appData.habits.find((h) => h.id === habitId);
     elements.titleInput.value = habit.title;
     elements.xpInput.value = habit.xp;
+    elements.categoryInput.value = habit.category || "📦 ПРОЧЕЕ";
     elements.modalTitle.textContent = "Изменить";
     elements.btnDelete.classList.remove("hidden");
   } else {
     elements.titleInput.value = "";
     elements.xpInput.value = "";
+    elements.categoryInput.value = "📦 ПРОЧЕЕ"; // Дефолт для новых
     elements.modalTitle.textContent = "Новая задача";
     elements.btnDelete.classList.add("hidden");
   }
@@ -224,14 +277,16 @@ elements.btnCancel.onclick = closeModal;
 elements.btnSave.onclick = () => {
   const title = elements.titleInput.value.trim();
   const xp = parseInt(elements.xpInput.value) || 0;
+  const category = elements.categoryInput.value.trim() || "📦 ПРОЧЕЕ";
+
   if (title && xp > 0) {
     if (currentEditId) {
       const habit = appData.habits.find((h) => h.id === currentEditId);
       habit.title = title;
       habit.xp = xp;
+      habit.category = category;
     } else {
-      // Новая задача по умолчанию летит в "ПРОЧЕЕ"
-      appData.habits.push({ id: Date.now(), title, xp, category: "📦 ПРОЧЕЕ" });
+      appData.habits.push({ id: Date.now(), title, xp, category });
     }
     saveData();
     closeModal();
@@ -248,7 +303,7 @@ elements.btnDelete.onclick = () => {
   }
 };
 
-// Модалка Статистики
+// Статистика
 elements.btnStats.onclick = () => {
   const uniqueDays = new Set(appData.logs.map((l) => l.date)).size;
   gsap.to(elements.statCompleted, {
@@ -287,7 +342,7 @@ elements.btnCloseStats.onclick = () => {
   });
 };
 
-// Экспорт CSV
+// Экспорт
 elements.btnExport.onclick = () => {
   if (appData.logs.length === 0) return alert("Нет данных");
   const dates = [...new Set(appData.logs.map((l) => l.date))].sort();
