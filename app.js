@@ -7,6 +7,8 @@ let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   logs: [],
 };
 
+let currentEditId = null; // Флаг текущего редактирования
+
 // DOM Элементы
 const elements = {
   habitsList: document.getElementById("habits-list"),
@@ -16,11 +18,13 @@ const elements = {
   currentDate: document.getElementById("current-date"),
   modal: document.getElementById("modal"),
   modalContent: document.getElementById("modal-content"),
+  modalTitle: document.getElementById("modal-title"),
   titleInput: document.getElementById("habit-title"),
   xpInput: document.getElementById("habit-xp"),
   btnAdd: document.getElementById("btn-add"),
   btnCancel: document.getElementById("btn-cancel"),
   btnSave: document.getElementById("btn-save"),
+  btnDelete: document.getElementById("btn-delete"),
   btnExport: document.getElementById("btn-export"),
 };
 
@@ -35,7 +39,6 @@ gsap.from("#app-container", {
   duration: 1,
   ease: "power3.out",
 });
-// Эффект левитации
 gsap.to("#app-container", {
   y: -5,
   duration: 3,
@@ -48,7 +51,6 @@ function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 }
 
-// Вибрация (Haptic feedback)
 function triggerVibration() {
   if (navigator.vibrate) navigator.vibrate(50);
 }
@@ -56,21 +58,18 @@ function triggerVibration() {
 function renderUI() {
   const today = getTodayStr();
 
-  // Дата в шапке
   const options = { weekday: "long", month: "long", day: "numeric" };
   elements.currentDate.textContent = new Date().toLocaleDateString(
     "ru-RU",
     options,
   );
 
-  // Общий XP (с анимацией счетчика)
   gsap.to(elements.totalXp, {
     innerHTML: appData.totalXP,
     duration: 0.5,
     snap: "innerHTML",
   });
 
-  // Считаем прогресс дня
   let dailyPotentialXP = 0;
   let dailyEarnedXP = 0;
 
@@ -79,30 +78,43 @@ function renderUI() {
   appData.habits.forEach((habit) => {
     dailyPotentialXP += habit.xp;
 
-    // Midnight reset логика: проверяем лог за сегодня
     const isCompletedToday = appData.logs.some(
       (l) => l.habitId === habit.id && l.date === today,
     );
     if (isCompletedToday) dailyEarnedXP += habit.xp;
 
-    // Рендер карточки
     const el = document.createElement("div");
-    el.className = `glass-task p-4 rounded-xl mb-3 flex justify-between items-center cursor-pointer ${isCompletedToday ? "completed" : ""}`;
+    el.className = `glass-task p-4 rounded-xl mb-3 flex justify-between items-center ${isCompletedToday ? "completed" : ""}`;
+
     el.innerHTML = `
-            <div>
+            <div class="flex-1 cursor-pointer toggle-area">
                 <p class="font-semibold ${isCompletedToday ? "text-teal-300 line-through" : "text-white"}">${habit.title}</p>
                 <p class="text-xs opacity-60">XP: ${habit.xp}</p>
             </div>
-            <div class="h-6 w-6 rounded-full border-2 flex items-center justify-center ${isCompletedToday ? "border-teal-400 bg-teal-400/20" : "border-white/30"}">
-                ${isCompletedToday ? '<i class="ph-bold ph-check text-teal-400"></i>' : ""}
+            <div class="flex items-center gap-4">
+                <button class="edit-btn text-white/40 hover:text-white transition-colors p-1">
+                    <i class="ph ph-pencil-simple text-xl"></i>
+                </button>
+                <div class="toggle-area h-7 w-7 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors ${isCompletedToday ? "border-teal-400 bg-teal-400/20" : "border-white/30"}">
+                    ${isCompletedToday ? '<i class="ph-bold ph-check text-teal-400"></i>' : ""}
+                </div>
             </div>
         `;
 
-    el.onclick = () => toggleHabit(habit.id);
+    // Вешаем события на зоны клика
+    const toggleAreas = el.querySelectorAll(".toggle-area");
+    toggleAreas.forEach((area) => {
+      area.onclick = () => toggleHabit(habit.id);
+    });
+
+    el.querySelector(".edit-btn").onclick = (e) => {
+      e.stopPropagation();
+      openModal(habit.id);
+    };
+
     elements.habitsList.appendChild(el);
   });
 
-  // Обновляем прогресс-бар
   const progressPercent =
     dailyPotentialXP === 0
       ? 0
@@ -126,11 +138,9 @@ function toggleHabit(id) {
   );
 
   if (logIndex > -1) {
-    // Откат
     appData.logs.splice(logIndex, 1);
     appData.totalXP -= habit.xp;
   } else {
-    // Выполнение
     appData.logs.push({ date: today, habitId: id, time: getTimeStr() });
     appData.totalXP += habit.xp;
   }
@@ -140,7 +150,8 @@ function toggleHabit(id) {
 }
 
 // Управление модалкой
-const openModal = () => {
+const openModal = (habitId = null) => {
+  currentEditId = habitId;
   elements.modal.classList.remove("hidden");
   gsap.to(elements.modal, { opacity: 1, duration: 0.2 });
   gsap.to(elements.modalContent, {
@@ -148,6 +159,21 @@ const openModal = () => {
     duration: 0.3,
     ease: "back.out(1.7)",
   });
+
+  if (habitId) {
+    const habit = appData.habits.find((h) => h.id === habitId);
+    elements.titleInput.value = habit.title;
+    elements.xpInput.value = habit.xp;
+    elements.modalTitle.textContent = "Редактировать";
+    elements.btnSave.textContent = "Сохранить";
+    elements.btnDelete.classList.remove("hidden");
+  } else {
+    elements.titleInput.value = "";
+    elements.xpInput.value = "";
+    elements.modalTitle.textContent = "Новая задача";
+    elements.btnSave.textContent = "Создать";
+    elements.btnDelete.classList.add("hidden");
+  }
 };
 
 const closeModal = () => {
@@ -157,51 +183,62 @@ const closeModal = () => {
     duration: 0.2,
     onComplete: () => {
       elements.modal.classList.add("hidden");
-      elements.titleInput.value = "";
-      elements.xpInput.value = "";
+      currentEditId = null;
     },
   });
 };
 
-elements.btnAdd.onclick = openModal;
+elements.btnAdd.onclick = () => openModal();
 elements.btnCancel.onclick = closeModal;
 
+// Сохранение / Обновление
 elements.btnSave.onclick = () => {
   const title = elements.titleInput.value.trim();
   const xp = parseInt(elements.xpInput.value) || 0;
 
   if (title && xp > 0) {
-    appData.habits.push({ id: Date.now(), title, xp });
+    if (currentEditId) {
+      const habit = appData.habits.find((h) => h.id === currentEditId);
+      habit.title = title;
+      habit.xp = xp;
+    } else {
+      appData.habits.push({ id: Date.now(), title, xp });
+    }
     saveData();
     closeModal();
     renderUI();
   }
 };
 
-// Модуль экспорта CSV (Сложная логика сводной таблицы)
+// Удаление задачи
+elements.btnDelete.onclick = () => {
+  if (currentEditId) {
+    appData.habits = appData.habits.filter((h) => h.id !== currentEditId);
+    saveData();
+    closeModal();
+    renderUI();
+  }
+};
+
+// Экспорт CSV
 elements.btnExport.onclick = () => {
   if (appData.logs.length === 0) return alert("Нет данных для выгрузки");
 
-  // Получаем уникальные даты и сортируем
   const dates = [...new Set(appData.logs.map((l) => l.date))].sort();
-
-  // Формируем заголовок CSV: Дата, Привычка 1, Привычка 2...
   let csvContent =
     "Дата," + appData.habits.map((h) => `"${h.title}"`).join(",") + "\n";
 
-  // Заполняем строки
   dates.forEach((date) => {
     let row = [date];
     appData.habits.forEach((habit) => {
       const log = appData.logs.find(
         (l) => l.date === date && l.habitId === habit.id,
       );
-      row.push(log ? log.time : ""); // Если выполнено - пишем время, иначе пусто
+      row.push(log ? log.time : "");
     });
     csvContent += row.join(",") + "\n";
   });
 
-  // Создаем файл и скачиваем
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -216,7 +253,7 @@ elements.btnExport.onclick = () => {
 // Запуск
 renderUI();
 
-// Регистрация Service Worker для PWA
+// Service Worker для PWA
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
@@ -224,6 +261,6 @@ if ("serviceWorker" in navigator) {
       .then((reg) => {
         console.log("SW зарегистрирован:", reg.scope);
       })
-      .catch((err) => console.log("SW ошибка регистрации:", err));
+      .catch((err) => console.log("SW ошибка:", err));
   });
 }
