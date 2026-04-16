@@ -1,4 +1,4 @@
-const CACHE_NAME = "impulse-v4"; // При серьезных изменениях меняй цифру (v3, v4...)
+const CACHE_NAME = "impulse-v5"; // При серьезных изменениях меняй цифру (v3, v4...)
 const urlsToCache = [
   "./",
   "./index.html",
