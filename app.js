@@ -20,13 +20,13 @@ const DEFAULT_HABITS = [
   { id: 3, title: "Тренировка", xp: 50, categoryId: "c_body" },
 ];
 
-// РАНГИ ИГРЫ
+// РАНГИ ИГРЫ (Только названия, без смены темы)
 const RANKS = [
-  { name: "Странник", minXp: 0, theme: "theme-novice" },
-  { name: "Адепт", minXp: 1000, theme: "theme-adept" },
-  { name: "Мастер", minXp: 5000, theme: "theme-master" },
-  { name: "Монах", minXp: 10000, theme: "theme-monk" },
-  { name: "Легенда", minXp: 25000, theme: "theme-legend" },
+  { name: "Странник", minXp: 0 },
+  { name: "Адепт", minXp: 1000 },
+  { name: "Мастер", minXp: 5000 },
+  { name: "Монах", minXp: 10000 },
+  { name: "Легенда", minXp: 25000 },
 ];
 
 let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
@@ -34,7 +34,7 @@ let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   categories: DEFAULT_CATEGORIES,
   habits: DEFAULT_HABITS,
   logs: [],
-  lastProcessedDate: null, // Для отслеживания штрафов
+  lastProcessedDate: null,
 };
 
 let currentEditId = null;
@@ -95,38 +95,28 @@ function triggerVibration() {
   if (navigator.vibrate) navigator.vibrate(50);
 }
 
-// === ДВИЖОК ШТРАФОВ ЗА ПРОКРАСТИНАЦИЮ ===
 function processPenalties() {
   const today = getTodayStr();
-
-  // Если первый запуск вообще - просто ставим дату и выходим
   if (!appData.lastProcessedDate) {
     appData.lastProcessedDate = today;
     saveData();
     return;
   }
-
-  if (appData.lastProcessedDate === today) return; // Уже проверяли сегодня
+  if (appData.lastProcessedDate === today) return;
 
   let lastDate = new Date(appData.lastProcessedDate);
   const currentDate = new Date(today);
   let burnedXP = 0;
 
-  // Сдвигаем на 1 день вперед от последнего входа
   lastDate.setDate(lastDate.getDate() + 1);
 
-  // Проходим по всем пропущенным дням
   while (lastDate < currentDate) {
     const dateStr = lastDate.toISOString().split("T")[0];
-
     appData.habits.forEach((habit) => {
       const done = appData.logs.some(
         (l) => l.habitId === habit.id && l.date === dateStr,
       );
-      if (!done) {
-        // Штраф: 50% от стоимости задачи
-        burnedXP += Math.floor(habit.xp / 2);
-      }
+      if (!done) burnedXP += Math.floor(habit.xp / 2);
     });
     lastDate.setDate(lastDate.getDate() + 1);
   }
@@ -143,19 +133,15 @@ function processPenalties() {
   saveData();
 }
 
-// === ПОДСЧЕТ СТРИКОВ (ОГОНЬ) ===
 function getStreak(habitId) {
   let streak = 0;
   let checkDate = new Date();
   const todayStr = checkDate.toISOString().split("T")[0];
 
-  // Если сегодня задача еще не выполнена, стрик считается со вчерашнего дня
   const hasToday = appData.logs.some(
     (l) => l.habitId === habitId && l.date === todayStr,
   );
-  if (!hasToday) {
-    checkDate.setDate(checkDate.getDate() - 1);
-  }
+  if (!hasToday) checkDate.setDate(checkDate.getDate() - 1);
 
   while (true) {
     const dateStr = checkDate.toISOString().split("T")[0];
@@ -165,23 +151,17 @@ function getStreak(habitId) {
     if (hasLog) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      break;
-    }
+    } else break;
   }
   return streak;
 }
 
-// === ОБНОВЛЕНИЕ РАНГА И ТЕМЫ ===
-function updateRankTheme() {
+function updateRank() {
   const currentRank =
     RANKS.slice()
       .reverse()
       .find((r) => appData.totalXP >= r.minXp) || RANKS[0];
   elements.rankName.textContent = currentRank.name;
-
-  // Меняем тему в CSS
-  document.body.className = `cloud-tunnel text-white font-sans ${currentRank.theme}`;
 }
 
 function moveHabit(id, direction) {
@@ -210,7 +190,7 @@ function swapInGlobalArray(id1, id2) {
 }
 
 function renderUI() {
-  updateRankTheme(); // Применяем стиль ранга
+  updateRank();
 
   const today = getTodayStr();
   const options = { weekday: "long", month: "long", day: "numeric" };
@@ -248,7 +228,6 @@ function renderUI() {
       );
       if (isCompletedToday) dailyEarnedXP += habit.xp;
 
-      // Считаем стрик
       const streak = getStreak(habit.id);
       const streakHtml =
         streak >= 3
@@ -258,9 +237,10 @@ function renderUI() {
       const el = document.createElement("div");
       el.className = `glass-task p-4 rounded-2xl mb-2 flex justify-between items-center ${isCompletedToday ? "completed" : ""}`;
 
+      // Здесь мы вернули классы bg-teal-400/20 и text-teal-400
       el.innerHTML = `
                 <div class="flex-1 cursor-pointer toggle-area">
-                    <p class="font-semibold text-sm ${isCompletedToday ? "opacity-50 line-through" : "text-white"}">
+                    <p class="font-semibold text-sm ${isCompletedToday ? "text-teal-300 line-through" : "text-white"}">
                         ${habit.title} ${streakHtml}
                     </p>
                     <p class="text-[10px] opacity-50 uppercase mt-0.5 tracking-wider">XP: ${habit.xp}</p>
@@ -271,8 +251,8 @@ function renderUI() {
                         <button class="move-down p-1 text-white/20 hover:text-white transition-colors ${indexInCat === catHabits.length - 1 ? "invisible" : ""}"><i class="ph-bold ph-caret-down text-lg"></i></button>
                     </div>
                     <button class="edit-btn text-white/20 hover:text-white transition-colors p-2"><i class="ph ph-pencil-simple text-lg"></i></button>
-                    <div class="toggle-area h-8 w-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors ${isCompletedToday ? "border-transparent shadow-[0_0_10px_rgba(255,255,255,0.2)]" : "border-white/10"}" style="${isCompletedToday ? "background-color: var(--accent); color: #000;" : ""}">
-                        ${isCompletedToday ? '<i class="ph-bold ph-check text-xs"></i>' : ""}
+                    <div class="toggle-area h-8 w-8 rounded-full border-2 flex items-center justify-center cursor-pointer transition-colors ${isCompletedToday ? "border-teal-400 bg-teal-400/20 shadow-[0_0_10px_rgba(45,212,191,0.2)]" : "border-white/10"}">
+                        ${isCompletedToday ? '<i class="ph-bold ph-check text-teal-400 text-xs"></i>' : ""}
                     </div>
                 </div>
             `;
@@ -481,10 +461,9 @@ elements.btnAddCat.onclick = () => {
 
 // === СТАТИСТИКА ===
 elements.btnStats.onclick = () => {
-  // Подсчет максимального стрика за все время
   let globalMaxStreak = 0;
   appData.habits.forEach((h) => {
-    let max = getStreak(h.id); // Для простоты берем текущий стрик.
+    let max = getStreak(h.id);
     if (max > globalMaxStreak) globalMaxStreak = max;
   });
 
@@ -575,8 +554,8 @@ elements.fileImport.onchange = (e) => {
 };
 
 // СТАРТ
-processPenalties(); // Сначала проверяем штрафы
-renderUI(); // Затем рендерим (внутри обновится тема)
+processPenalties();
+renderUI();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
