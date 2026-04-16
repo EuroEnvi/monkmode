@@ -132,3 +132,20 @@ body {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
+
+/* Утилиты для динамического акцентного цвета */
+.text-accent {
+  color: var(--accent) !important;
+}
+
+.bg-accent {
+  background-color: var(--accent) !important;
+  color: #0f172a !important; /* Глубокий темный цвет текста для идеального контраста */
+}
+
+/* Делаем выполненную галочку черной для читаемости */
+.glass-task.completed .toggle-area {
+  background-color: var(--accent);
+  border-color: transparent;
+  color: #0f172a;
+}
