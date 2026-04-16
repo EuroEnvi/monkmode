@@ -10,7 +10,6 @@
     <link rel="manifest" href="manifest.json" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css" />
-
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   </head>
@@ -74,7 +73,7 @@
             0% выполнено
           </p>
           <p class="text-[9px] opacity-50 uppercase tracking-widest">
-            Дисциплина дня
+            Дисциплина
           </p>
         </div>
       </header>
@@ -106,46 +105,50 @@
           Настройка
         </h2>
 
-        <div class="space-y-4">
+        <div class="space-y-5">
           <div>
             <label
-              class="text-[10px] uppercase opacity-40 ml-1 mb-1 block tracking-widest"
+              class="text-[10px] uppercase opacity-40 ml-1 mb-2 block tracking-widest"
               >Название</label
             >
             <input
               type="text"
               id="habit-title"
-              placeholder="Что нужно сделать?"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors placeholder:opacity-20"
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors"
             />
           </div>
           <div>
             <label
-              class="text-[10px] uppercase opacity-40 ml-1 mb-1 block tracking-widest"
+              class="text-[10px] uppercase opacity-40 ml-1 mb-2 block tracking-widest"
               >Ценность (XP)</label
             >
             <input
               type="number"
               id="habit-xp"
-              placeholder="50"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors placeholder:opacity-20"
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors"
             />
           </div>
           <div>
-            <label
-              class="text-[10px] uppercase opacity-40 ml-1 mb-1 block tracking-widest"
-              >Блок (Категория)</label
-            >
-            <input
-              type="text"
+            <div class="flex justify-between items-center mb-2">
+              <label
+                class="text-[10px] uppercase opacity-40 ml-1 block tracking-widest"
+                >Блок (Категория)</label
+              >
+              <button
+                id="btn-open-categories"
+                class="text-[10px] text-teal-400 hover:text-teal-300 uppercase tracking-widest flex items-center gap-1"
+              >
+                <i class="ph ph-gear"></i> Редактор
+              </button>
+            </div>
+            <select
               id="habit-category"
-              placeholder="Например: ☀️ УТРО"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors placeholder:opacity-20"
-            />
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
+            ></select>
           </div>
         </div>
 
-        <div class="flex flex-col gap-3 mt-8">
+        <div class="flex flex-col gap-3 mt-10">
           <button
             id="btn-save"
             class="w-full bg-teal-500 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform"
@@ -169,6 +172,56 @@
         </div>
       </div>
     </div>
+
+    <div
+      id="category-modal"
+      class="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[80] hidden flex items-center justify-center p-6 opacity-0"
+    >
+      <div
+        class="holographic-glass w-full max-w-sm rounded-[2.5rem] p-8 transform scale-95 shadow-3xl"
+        id="category-content"
+      >
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-black uppercase tracking-widest">
+            Категории
+          </h2>
+          <button
+            id="btn-close-category"
+            class="text-white/30 hover:text-white transition-colors bg-white/5 p-2 rounded-full"
+          >
+            <i class="ph ph-x text-xl block"></i>
+          </button>
+        </div>
+
+        <div class="flex gap-2 mb-6">
+          <input
+            type="text"
+            id="new-cat-emoji"
+            placeholder="🚀"
+            maxlength="2"
+            class="w-14 bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white outline-none focus:border-teal-500/50 transition-colors text-lg"
+          />
+          <input
+            type="text"
+            id="new-cat-name"
+            placeholder="Название..."
+            class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-teal-500/50 transition-colors"
+          />
+          <button
+            id="btn-add-cat"
+            class="bg-teal-500/80 text-white px-4 rounded-xl hover:bg-teal-400 transition-colors"
+          >
+            <i class="ph-bold ph-plus"></i>
+          </button>
+        </div>
+
+        <div
+          class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2 mb-6"
+          id="categories-list"
+        ></div>
+      </div>
+    </div>
+
     <div
       id="stats-modal"
       class="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[60] hidden flex items-center justify-center p-6 opacity-0"
@@ -177,7 +230,7 @@
         class="holographic-glass w-full max-w-sm rounded-[2.5rem] p-8 transform scale-95 shadow-3xl"
         id="stats-content"
       >
-        <div class="flex justify-between items-center mb-10">
+        <div class="flex justify-between items-center mb-8">
           <h2 class="text-2xl font-black uppercase tracking-tighter italic">
             Сводка
           </h2>
@@ -233,12 +286,37 @@
           </div>
         </div>
 
-        <button
-          id="btn-export"
-          class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl flex justify-center items-center gap-3 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors active:scale-95"
-        >
-          <i class="ph ph-download-simple text-xl"></i> Выгрузить CSV
-        </button>
+        <div class="border-t border-white/10 pt-6 space-y-3">
+          <h3
+            class="text-[10px] uppercase opacity-50 tracking-widest mb-3 text-center"
+          >
+            База данных
+          </h3>
+
+          <button
+            id="btn-reset-today"
+            class="w-full bg-orange-500/10 text-orange-400 border border-orange-500/20 py-3 rounded-xl flex justify-center items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-colors active:scale-95"
+          >
+            <i class="ph ph-arrow-counter-clockwise text-lg"></i> Сбросить день
+            (Undo)
+          </button>
+
+          <div class="flex gap-3">
+            <button
+              id="btn-export-backup"
+              class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl flex justify-center items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors active:scale-95"
+            >
+              <i class="ph ph-download-simple text-lg"></i> Бэкап
+            </button>
+            <input type="file" id="file-import" accept=".json" class="hidden" />
+            <button
+              id="btn-import-backup"
+              class="flex-1 bg-white/5 border border-white/10 py-3 rounded-xl flex justify-center items-center gap-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors active:scale-95"
+            >
+              <i class="ph ph-upload-simple text-lg"></i> Загрузить
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

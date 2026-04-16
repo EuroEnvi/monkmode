@@ -1,47 +1,83 @@
 const STORAGE_KEY = "monk_mode_data";
 
-const DEFAULT_HABITS = [
-  { id: 1, title: "Ранний подъем", xp: 10, category: "☀️ УТРО" },
-  { id: 2, title: "Стакан воды", xp: 5, category: "☀️ УТРО" },
-  { id: 3, title: "Контрастный душ", xp: 15, category: "☀️ УТРО" },
-  { id: 4, title: "Зарядка / Разминка", xp: 20, category: "☀️ УТРО" },
-  { id: 5, title: "Главная задача (Deep Work)", xp: 100, category: "⚙️ ФОКУС" },
-  { id: 6, title: "Разбор почты / сообщений", xp: 20, category: "⚙️ ФОКУС" },
-  { id: 7, title: "Изучение нового (15 мин)", xp: 30, category: "⚙️ ФОКУС" },
-  { id: 8, title: "Тренировка", xp: 50, category: "🥗 ТЕЛО" },
-  { id: 9, title: "10 000 шагов", xp: 30, category: "🥗 ТЕЛО" },
-  { id: 10, title: "Никакого сахара", xp: 40, category: "🥗 ТЕЛО" },
-  { id: 11, title: "Звонок близким", xp: 30, category: "🤝 СВЯЗИ" },
-  { id: 12, title: "Уборка (15 минут)", xp: 20, category: "🤝 СВЯЗИ" },
-  { id: 13, title: "Планирование завтра", xp: 20, category: "🌙 ВЕЧЕР" },
-  { id: 14, title: "Чтение (10 стр)", xp: 20, category: "🌙 ВЕЧЕР" },
-  { id: 15, title: "Отбой до 23:30", xp: 30, category: "🌙 ВЕЧЕР" },
+// Базовые категории
+const DEFAULT_CATEGORIES = [
+  { id: "c_morning", name: "УТРО", emoji: "☀️" },
+  { id: "c_focus", name: "ФОКУС", emoji: "⚙️" },
+  { id: "c_body", name: "ТЕЛО", emoji: "🥗" },
+  { id: "c_social", name: "СВЯЗИ", emoji: "🤝" },
+  { id: "c_night", name: "ВЕЧЕР", emoji: "🌙" },
+  { id: "c_other", name: "ПРОЧЕЕ", emoji: "📦" },
 ];
 
+// Базовые привычки (привязаны к ID категорий)
+const DEFAULT_HABITS = [
+  { id: 1, title: "Ранний подъем", xp: 10, categoryId: "c_morning" },
+  {
+    id: 2,
+    title: "Главная задача (Deep Work)",
+    xp: 100,
+    categoryId: "c_focus",
+  },
+  { id: 3, title: "Тренировка", xp: 50, categoryId: "c_body" },
+];
+
+// Загрузка или инициализация
 let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   totalXP: 0,
+  categories: DEFAULT_CATEGORIES,
   habits: DEFAULT_HABITS,
   logs: [],
 };
 
+// МИГРАЦИЯ СТАРЫХ ДАННЫХ (Защита от поломки)
+if (!appData.categories) {
+  appData.categories = DEFAULT_CATEGORIES;
+  appData.habits.forEach((h) => {
+    if (typeof h.category === "string") {
+      const matchedCat = appData.categories.find(
+        (c) => h.category.includes(c.name) || h.category.includes(c.emoji),
+      );
+      h.categoryId = matchedCat ? matchedCat.id : "c_other";
+      delete h.category;
+    }
+  });
+  saveData();
+}
+
 let currentEditId = null;
 
+// Элементы DOM
 const elements = {
   habitsList: document.getElementById("habits-list"),
   totalXp: document.getElementById("total-xp"),
   progressFill: document.getElementById("progress-fill"),
   dailyProgressText: document.getElementById("daily-progress-text"),
   currentDate: document.getElementById("current-date"),
+
+  // Модалка задач
   modal: document.getElementById("modal"),
   modalContent: document.getElementById("modal-content"),
   modalTitle: document.getElementById("modal-title"),
   titleInput: document.getElementById("habit-title"),
   xpInput: document.getElementById("habit-xp"),
-  categoryInput: document.getElementById("habit-category"), // Новое поле
+  categorySelect: document.getElementById("habit-category"),
   btnAdd: document.getElementById("btn-add"),
   btnCancel: document.getElementById("btn-cancel"),
   btnSave: document.getElementById("btn-save"),
   btnDelete: document.getElementById("btn-delete"),
+
+  // Модалка Категорий
+  catModal: document.getElementById("category-modal"),
+  catContent: document.getElementById("category-content"),
+  btnOpenCat: document.getElementById("btn-open-categories"),
+  btnCloseCat: document.getElementById("btn-close-category"),
+  catList: document.getElementById("categories-list"),
+  newCatEmoji: document.getElementById("new-cat-emoji"),
+  newCatName: document.getElementById("new-cat-name"),
+  btnAddCat: document.getElementById("btn-add-cat"),
+
+  // Статистика и Настройки
   statsModal: document.getElementById("stats-modal"),
   statsContent: document.getElementById("stats-content"),
   btnStats: document.getElementById("btn-stats"),
@@ -49,7 +85,11 @@ const elements = {
   statCompleted: document.getElementById("stat-completed"),
   statDays: document.getElementById("stat-days"),
   statXp: document.getElementById("stat-xp"),
-  btnExport: document.getElementById("btn-export"),
+
+  btnResetToday: document.getElementById("btn-reset-today"),
+  btnExport: document.getElementById("btn-export-backup"),
+  btnImport: document.getElementById("btn-import-backup"),
+  fileImport: document.getElementById("file-import"),
 };
 
 const getTodayStr = () => new Date().toISOString().split("T")[0];
@@ -70,22 +110,19 @@ function triggerVibration() {
   if (navigator.vibrate) navigator.vibrate(50);
 }
 
-// Умная перестановка внутри категории
+// Перестановка задач внутри категории
 function moveHabit(id, direction) {
   const habit = appData.habits.find((h) => h.id === id);
   if (!habit) return;
 
-  const catName = habit.category || "📦 ПРОЧЕЕ";
   const catHabits = appData.habits.filter(
-    (h) => (h.category || "📦 ПРОЧЕЕ") === catName,
+    (h) => h.categoryId === habit.categoryId,
   );
   const indexInCat = catHabits.findIndex((h) => h.id === id);
 
   if (direction === -1 && indexInCat > 0) {
-    // Двигаем вверх (меняем с соседом сверху)
     swapInGlobalArray(id, catHabits[indexInCat - 1].id);
   } else if (direction === 1 && indexInCat < catHabits.length - 1) {
-    // Двигаем вниз (меняем с соседом снизу)
     swapInGlobalArray(id, catHabits[indexInCat + 1].id);
   }
 }
@@ -93,7 +130,6 @@ function moveHabit(id, direction) {
 function swapInGlobalArray(id1, id2) {
   const idx1 = appData.habits.findIndex((h) => h.id === id1);
   const idx2 = appData.habits.findIndex((h) => h.id === id2);
-  // Меняем элементы местами
   [appData.habits[idx1], appData.habits[idx2]] = [
     appData.habits[idx2],
     appData.habits[idx1],
@@ -121,21 +157,18 @@ function renderUI() {
 
   elements.habitsList.innerHTML = "";
 
-  // Собираем уникальные категории без дубликатов с сохранением порядка
-  const categories = [
-    ...new Set(appData.habits.map((h) => h.category || "📦 ПРОЧЕЕ")),
-  ];
+  // Рендер по категориям
+  appData.categories.forEach((cat) => {
+    const catHabits = appData.habits.filter((h) => h.categoryId === cat.id);
+    if (catHabits.length === 0 && cat.id !== "c_other") return; // Прячем пустые категории (кроме "ПРОЧЕЕ", если надо)
 
-  categories.forEach((catName) => {
-    const header = document.createElement("div");
-    header.className =
-      "text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-3 mt-6 first:mt-2 ml-1";
-    header.textContent = catName;
-    elements.habitsList.appendChild(header);
-
-    const catHabits = appData.habits.filter(
-      (h) => (h.category || "📦 ПРОЧЕЕ") === catName,
-    );
+    if (catHabits.length > 0) {
+      const header = document.createElement("div");
+      header.className =
+        "text-[10px] font-bold uppercase tracking-[0.2em] opacity-40 mb-3 mt-6 first:mt-2 ml-1 flex items-center gap-2";
+      header.innerHTML = `<span>${cat.emoji}</span> <span>${cat.name}</span>`;
+      elements.habitsList.appendChild(header);
+    }
 
     catHabits.forEach((habit, indexInCat) => {
       dailyPotentialXP += habit.xp;
@@ -147,7 +180,6 @@ function renderUI() {
       const el = document.createElement("div");
       el.className = `glass-task p-4 rounded-2xl mb-2 flex justify-between items-center ${isCompletedToday ? "completed" : ""}`;
 
-      // Вернули стрелочки, скрывая их у первого и последнего элемента в категории
       el.innerHTML = `
                 <div class="flex-1 cursor-pointer toggle-area">
                     <p class="font-semibold text-sm ${isCompletedToday ? "text-teal-300 line-through" : "text-white"}">${habit.title}</p>
@@ -171,8 +203,7 @@ function renderUI() {
                 </div>
             `;
 
-      const toggleAreas = el.querySelectorAll(".toggle-area");
-      toggleAreas.forEach((area) => {
+      el.querySelectorAll(".toggle-area").forEach((area) => {
         area.onclick = () => toggleHabit(habit.id);
       });
 
@@ -228,13 +259,27 @@ function toggleHabit(id) {
     appData.logs.push({ date: today, habitId: id, time: getTimeStr() });
     appData.totalXP += habit.xp;
   }
+  if (appData.totalXP < 0) appData.totalXP = 0; // Защита от минуса
   saveData();
   renderUI();
 }
 
-// Управление модалкой (с добавлением категории)
+// === Управление задачами ===
+function updateCategorySelect() {
+  elements.categorySelect.innerHTML = "";
+  appData.categories.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat.id;
+    opt.textContent = `${cat.emoji} ${cat.name}`;
+    opt.className = "bg-slate-900 text-white"; // Фикс прозрачности системного селекта
+    elements.categorySelect.appendChild(opt);
+  });
+}
+
 const openModal = (habitId = null) => {
   currentEditId = habitId;
+  updateCategorySelect();
+
   elements.modal.classList.remove("hidden");
   gsap.to(elements.modal, { opacity: 1, duration: 0.2 });
   gsap.to(elements.modalContent, {
@@ -247,13 +292,13 @@ const openModal = (habitId = null) => {
     const habit = appData.habits.find((h) => h.id === habitId);
     elements.titleInput.value = habit.title;
     elements.xpInput.value = habit.xp;
-    elements.categoryInput.value = habit.category || "📦 ПРОЧЕЕ";
+    elements.categorySelect.value = habit.categoryId || "c_other";
     elements.modalTitle.textContent = "Изменить";
     elements.btnDelete.classList.remove("hidden");
   } else {
     elements.titleInput.value = "";
     elements.xpInput.value = "";
-    elements.categoryInput.value = "📦 ПРОЧЕЕ"; // Дефолт для новых
+    elements.categorySelect.value = "c_other";
     elements.modalTitle.textContent = "Новая задача";
     elements.btnDelete.classList.add("hidden");
   }
@@ -277,16 +322,16 @@ elements.btnCancel.onclick = closeModal;
 elements.btnSave.onclick = () => {
   const title = elements.titleInput.value.trim();
   const xp = parseInt(elements.xpInput.value) || 0;
-  const category = elements.categoryInput.value.trim() || "📦 ПРОЧЕЕ";
+  const categoryId = elements.categorySelect.value;
 
   if (title && xp > 0) {
     if (currentEditId) {
       const habit = appData.habits.find((h) => h.id === currentEditId);
       habit.title = title;
       habit.xp = xp;
-      habit.category = category;
+      habit.categoryId = categoryId;
     } else {
-      appData.habits.push({ id: Date.now(), title, xp, category });
+      appData.habits.push({ id: Date.now(), title, xp, categoryId });
     }
     saveData();
     closeModal();
@@ -303,7 +348,82 @@ elements.btnDelete.onclick = () => {
   }
 };
 
-// Статистика
+// === РЕДАКТОР КАТЕГОРИЙ ===
+function renderCategoriesList() {
+  elements.catList.innerHTML = "";
+  appData.categories.forEach((cat) => {
+    const el = document.createElement("div");
+    el.className =
+      "flex justify-between items-center bg-white/5 border border-white/10 p-3 rounded-xl";
+    el.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="text-xl">${cat.emoji}</span>
+                <span class="font-bold text-sm tracking-widest">${cat.name}</span>
+            </div>
+        `;
+    // Удалять "ПРОЧЕЕ" нельзя - это дефолтный мусорник
+    if (cat.id !== "c_other") {
+      const delBtn = document.createElement("button");
+      delBtn.className = "text-red-400 hover:text-red-300 p-1";
+      delBtn.innerHTML = '<i class="ph-bold ph-trash"></i>';
+      delBtn.onclick = () => deleteCategory(cat.id);
+      el.appendChild(delBtn);
+    }
+    elements.catList.appendChild(el);
+  });
+}
+
+function deleteCategory(id) {
+  if (!confirm("Удалить блок? Задачи будут перенесены в 'ПРОЧЕЕ'.")) return;
+
+  appData.categories = appData.categories.filter((c) => c.id !== id);
+  // Переносим осиротевшие задачи
+  appData.habits.forEach((h) => {
+    if (h.categoryId === id) h.categoryId = "c_other";
+  });
+
+  saveData();
+  renderCategoriesList();
+  renderUI();
+}
+
+elements.btnOpenCat.onclick = () => {
+  renderCategoriesList();
+  elements.catModal.classList.remove("hidden");
+  gsap.to(elements.catModal, { opacity: 1, duration: 0.2 });
+  gsap.to(elements.catContent, {
+    scale: 1,
+    duration: 0.3,
+    ease: "back.out(1.5)",
+  });
+};
+
+elements.btnCloseCat.onclick = () => {
+  gsap.to(elements.catContent, { scale: 0.95, duration: 0.2 });
+  gsap.to(elements.catModal, {
+    opacity: 0,
+    duration: 0.2,
+    onComplete: () => {
+      elements.catModal.classList.add("hidden");
+      updateCategorySelect(); // Обновляем селект в форме задачи
+    },
+  });
+};
+
+elements.btnAddCat.onclick = () => {
+  const emoji = elements.newCatEmoji.value.trim() || "📌";
+  const name = elements.newCatName.value.trim().toUpperCase();
+  if (name) {
+    appData.categories.push({ id: "c_" + Date.now(), name, emoji });
+    saveData();
+    elements.newCatEmoji.value = "";
+    elements.newCatName.value = "";
+    renderCategoriesList();
+    renderUI();
+  }
+};
+
+// === СТАТИСТИКА И ДАННЫЕ ===
 elements.btnStats.onclick = () => {
   const uniqueDays = new Set(appData.logs.map((l) => l.date)).size;
   gsap.to(elements.statCompleted, {
@@ -342,29 +462,71 @@ elements.btnCloseStats.onclick = () => {
   });
 };
 
-// Экспорт
-elements.btnExport.onclick = () => {
-  if (appData.logs.length === 0) return alert("Нет данных");
-  const dates = [...new Set(appData.logs.map((l) => l.date))].sort();
-  let csvContent =
-    "Дата," + appData.habits.map((h) => `"${h.title}"`).join(",") + "\n";
-  dates.forEach((date) => {
-    let row = [date];
-    appData.habits.forEach((habit) => {
-      const log = appData.logs.find(
-        (l) => l.date === date && l.habitId === habit.id,
-      );
-      row.push(log ? log.time : "");
-    });
-    csvContent += row.join(",") + "\n";
+// Сброс дня (Undo)
+elements.btnResetToday.onclick = () => {
+  if (!confirm("Точно снять все галочки за сегодня? XP за них сгорит.")) return;
+
+  const today = getTodayStr();
+  const todayLogs = appData.logs.filter((l) => l.date === today);
+
+  // Вычитаем XP за сегодня
+  todayLogs.forEach((log) => {
+    const habit = appData.habits.find((h) => h.id === log.habitId);
+    if (habit) appData.totalXP -= habit.xp;
   });
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `impulse_report.csv`;
-  link.click();
+
+  if (appData.totalXP < 0) appData.totalXP = 0;
+
+  // Оставляем логи только за прошлые дни
+  appData.logs = appData.logs.filter((l) => l.date !== today);
+
+  saveData();
+  renderUI();
+  elements.btnCloseStats.click(); // Закрываем модалку
 };
 
+// Экспорт БД (Бэкап JSON)
+elements.btnExport.onclick = () => {
+  const dataStr = JSON.stringify(appData, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `impulse_backup_${getTodayStr()}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+// Импорт БД (Восстановление JSON)
+elements.btnImport.onclick = () => elements.fileImport.click();
+
+elements.fileImport.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const importedData = JSON.parse(event.target.result);
+      // Базовая проверка структуры
+      if (importedData.habits && importedData.logs && importedData.categories) {
+        appData = importedData;
+        saveData();
+        renderUI();
+        alert("База данных успешно восстановлена!");
+        elements.btnCloseStats.click();
+      } else {
+        alert("Файл поврежден или имеет неверный формат.");
+      }
+    } catch (err) {
+      alert("Ошибка чтения файла JSON.");
+    }
+    elements.fileImport.value = ""; // Сброс инпута
+  };
+  reader.readAsText(file);
+};
+
+// Старт
 renderUI();
 
 if ("serviceWorker" in navigator) {
