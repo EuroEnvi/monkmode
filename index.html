@@ -13,7 +13,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   </head>
-  <body class="cloud-tunnel text-white font-sans theme-novice">
+  <body class="cloud-tunnel text-white font-sans">
     <main
       id="app-container"
       class="holographic-glass app-wrapper relative z-10 flex flex-col p-6 shadow-2xl"
@@ -41,12 +41,12 @@
             >
               <div class="flex flex-col items-end">
                 <span
-                  class="text-3xl font-black drop-shadow-md text-accent"
+                  class="text-3xl font-black drop-shadow-[0_0_10px_rgba(45,212,191,0.3)] text-teal-300"
                   id="total-xp"
                   >0</span
                 >
                 <span
-                  class="text-[9px] font-bold uppercase tracking-[0.3em] mt-1 text-accent"
+                  class="text-[9px] font-bold uppercase tracking-[0.3em] mt-1 text-teal-300"
                   id="rank-name"
                   >Странник</span
                 >
@@ -54,7 +54,7 @@
               <div
                 class="bg-white/10 p-2.5 rounded-2xl border border-white/10 group-hover:bg-white/20 transition-colors"
               >
-                <i class="ph ph-chart-line-up text-xl text-accent"></i>
+                <i class="ph ph-chart-line-up text-xl text-teal-300"></i>
               </div>
             </div>
           </div>
@@ -65,7 +65,7 @@
         >
           <div
             id="progress-fill"
-            class="h-full w-0 rounded-full transition-all duration-700 bg-accent"
+            class="h-full bg-gradient-to-r from-teal-400 to-emerald-400 w-0 rounded-full transition-all duration-700"
           ></div>
         </div>
         <div class="flex justify-between items-center mt-2">
@@ -86,7 +86,7 @@
       <footer class="mt-2 flex-shrink-0 pt-2">
         <button
           id="btn-add"
-          class="w-full active:opacity-80 py-4 rounded-2xl flex justify-center items-center gap-3 text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 bg-accent"
+          class="w-full bg-teal-500/80 active:bg-teal-400 py-4 rounded-2xl flex justify-center items-center gap-3 text-sm font-black uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(45,212,191,0.2)] active:scale-95"
         >
           <i class="ph-bold ph-plus text-xl"></i> Добавить активность
         </button>
@@ -117,7 +117,7 @@
             <input
               type="text"
               id="habit-title"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none transition-colors"
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors"
             />
           </div>
           <div>
@@ -128,7 +128,7 @@
             <input
               type="number"
               id="habit-xp"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none transition-colors"
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors"
             />
           </div>
           <div>
@@ -139,14 +139,14 @@
               >
               <button
                 id="btn-open-categories"
-                class="text-[10px] uppercase tracking-widest flex items-center gap-1 text-accent"
+                class="text-[10px] text-teal-400 hover:text-teal-300 uppercase tracking-widest flex items-center gap-1"
               >
                 <i class="ph ph-gear"></i> Редактор
               </button>
             </div>
             <select
               id="habit-category"
-              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none transition-colors appearance-none cursor-pointer"
+              class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-teal-500/50 transition-colors appearance-none cursor-pointer"
             ></select>
           </div>
         </div>
@@ -154,7 +154,7 @@
         <div class="flex flex-col gap-3 mt-10">
           <button
             id="btn-save"
-            class="w-full py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform bg-accent"
+            class="w-full bg-teal-500 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform"
           >
             Подтвердить
           </button>
@@ -202,17 +202,17 @@
             id="new-cat-emoji"
             placeholder="🚀"
             maxlength="2"
-            class="w-14 bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white outline-none transition-colors text-lg"
+            class="w-14 bg-white/5 border border-white/10 rounded-xl p-3 text-center text-white outline-none focus:border-teal-500/50 transition-colors text-lg"
           />
           <input
             type="text"
             id="new-cat-name"
             placeholder="Название..."
-            class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white outline-none transition-colors"
+            class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-teal-500/50 transition-colors"
           />
           <button
             id="btn-add-cat"
-            class="px-4 rounded-xl transition-colors active:scale-95 bg-accent"
+            class="bg-teal-500/80 text-white px-4 rounded-xl hover:bg-teal-400 transition-colors active:scale-95"
           >
             <i class="ph-bold ph-plus"></i>
           </button>
@@ -249,7 +249,7 @@
           <div
             class="bg-white/5 border border-white/5 rounded-3xl p-5 text-center"
           >
-            <i class="ph-fill ph-check-circle text-3xl mb-2 text-accent"></i>
+            <i class="ph-fill ph-check-circle text-teal-400 text-3xl mb-2"></i>
             <p class="text-3xl font-black" id="stat-completed">0</p>
             <p class="text-[9px] uppercase opacity-40 mt-1 tracking-widest">
               Задач
@@ -265,26 +265,25 @@
             </p>
           </div>
           <div
-            class="col-span-2 border rounded-[2rem] p-8 text-center relative overflow-hidden"
-            style="
-              border-color: rgba(255, 255, 255, 0.1);
-              background: rgba(0, 0, 0, 0.2);
-            "
+            class="col-span-2 bg-gradient-to-br from-teal-500/20 to-emerald-500/10 border border-teal-500/20 rounded-[2rem] p-8 text-center relative overflow-hidden"
           >
             <i
-              class="ph-fill ph-medal text-5xl mb-3 relative z-10 text-accent"
+              class="ph-fill ph-lightning text-teal-300 text-5xl mb-3 relative z-10"
             ></i>
             <p
-              class="text-6xl font-black text-white drop-shadow-lg relative z-10"
+              class="text-6xl font-black text-white drop-shadow-[0_0_20px_rgba(45,212,191,0.5)] relative z-10"
               id="stat-xp"
             >
               0
             </p>
             <p
-              class="text-[10px] uppercase opacity-70 mt-3 tracking-[0.3em] relative z-10 text-accent"
+              class="text-[10px] uppercase opacity-70 text-teal-100 mt-3 tracking-[0.3em] relative z-10"
             >
               Total Level XP
             </p>
+            <div
+              class="absolute inset-0 bg-teal-500/5 blur-3xl rounded-full"
+            ></div>
           </div>
         </div>
 
